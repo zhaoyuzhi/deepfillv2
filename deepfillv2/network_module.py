@@ -127,8 +127,8 @@ class GatedConv2d(nn.Module):
             self.conv2d = SpectralNorm(nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding = 0, dilation = dilation))
             self.mask_conv2d = SpectralNorm(nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding = 0, dilation = dilation))
         else:
-            self.conv2d = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation = dilation)
-            self.mask_conv2d = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding, dilation = dilation)
+            self.conv2d = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding = 0, dilation = dilation)
+            self.mask_conv2d = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding = 0, dilation = dilation)
         self.sigmoid = torch.nn.Sigmoid()
     
     def forward(self, x):

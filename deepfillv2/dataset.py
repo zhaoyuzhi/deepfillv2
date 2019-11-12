@@ -46,7 +46,8 @@ class InpaintDataset(Dataset):
         Returns:
             tuple: (top, left, height, width)
         """
-        height, width = shape
+        height = shape
+        width = shape
         mask = np.zeros((height, width), np.float32)
         times = np.random.randint(times)
         for i in range(times):
@@ -62,7 +63,7 @@ class InpaintDataset(Dataset):
                 end_y = (start_y + length * np.cos(angle)).astype(np.int32)
                 cv2.line(mask, (start_y, start_x), (end_y, end_x), 1.0, brush_w)
                 start_x, start_y = end_x, end_y
-        return mask.reshape(mask.shape + (1, )).astype(np.float32)
+        return mask.reshape((1, ) + mask.shape).astype(np.float32)
     
     def random_bbox(self, shape, margin, bbox_shape):
         """Generate a random tlhw with configuration.
@@ -71,9 +72,12 @@ class InpaintDataset(Dataset):
         Returns:
             tuple: (top, left, height, width)
         """
-        img_height, img_width = shape
-        height, width = bbox_shape
-        ver_margin, hor_margin = margin
+        img_height = shape
+        img_width = shape
+        height = bbox_shape
+        width = bbox_shape
+        ver_margin = margin
+        hor_margin = margin
         maxt = img_height - ver_margin - height
         maxl = img_width - hor_margin - width
         t = np.random.randint(low = ver_margin, high = maxt)
@@ -95,10 +99,11 @@ class InpaintDataset(Dataset):
         for i in range(times):
             bbox = self.random_bbox(shape, margin, bbox_shape)
             bboxs.append(bbox)
-        height, width = shape
+        height = shape
+        width = shape
         mask = np.zeros((height, width), np.float32)
         for bbox in bboxs:
             h = int(bbox[2] * 0.1) + np.random.randint(int(bbox[2] * 0.2 + 1))
             w = int(bbox[3] * 0.1) + np.random.randint(int(bbox[3] * 0.2) + 1)
             mask[(bbox[0] + h) : (bbox[0] + bbox[2] - h), (bbox[1] + w) : (bbox[1] + bbox[3] - w)] = 1.
-        return mask.reshape(mask.shape + (1, )).astype(np.float32)
+        return mask.reshape((1, ) + mask.shape).astype(np.float32)

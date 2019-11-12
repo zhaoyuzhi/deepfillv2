@@ -98,6 +98,10 @@ def WGAN_trainer(opt):
             # Generator output
             first_out, second_out = generator(img, mask)
 
+            # forward propagation
+            first_out_wholeimg = img * (1 - mask) + first_out * mask        # in range [-1, 1]
+            second_out_wholeimg = img * (1 - mask) + second_out * mask      # in range [-1, 1]
+
             # Fake samples
             fake_scalar = discriminator(second_out_wholeimg.detach(), mask)
             # True samples
@@ -109,10 +113,6 @@ def WGAN_trainer(opt):
 
             ### Train Generator
             optimizer_g.zero_grad()
-
-            # forward propagation
-            first_out_wholeimg = img * (1 - mask) + first_out * mask        # in range [-1, 1]
-            second_out_wholeimg = img * (1 - mask) + second_out * mask      # in range [-1, 1]
 
             # Mask L1 Loss
             first_MaskL1Loss = L1Loss(first_out_wholeimg, img)
@@ -251,6 +251,10 @@ def LSGAN_trainer(opt):
             # Generator output
             first_out, second_out = generator(img, mask)
 
+            # forward propagation
+            first_out_wholeimg = img * (1 - mask) + first_out * mask        # in range [-1, 1]
+            second_out_wholeimg = img * (1 - mask) + second_out * mask      # in range [-1, 1]
+
             # Fake samples
             fake_scalar = discriminator(second_out_wholeimg.detach(), mask)
             # True samples
@@ -265,10 +269,6 @@ def LSGAN_trainer(opt):
 
             ### Train Generator
             optimizer_g.zero_grad()
-
-            # forward propagation
-            first_out_wholeimg = img * (1 - mask) + first_out * mask        # in range [-1, 1]
-            second_out_wholeimg = img * (1 - mask) + second_out * mask      # in range [-1, 1]
 
             # Mask L1 Loss
             first_MaskL1Loss = L1Loss(first_out_wholeimg, img)

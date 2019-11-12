@@ -11,10 +11,11 @@ if __name__ == "__main__":
     parser.add_argument('--gan_type', type = str, default = 'WGAN', help = 'the type of GAN for training')
     parser.add_argument('--multi_gpu', type = bool, default = False, help = 'nn.Parallel needs or not')
     parser.add_argument('--gpu_ids', type = str, default = "0, 1", help = 'gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
+    parser.add_argument('--cudnn_benchmark', type = bool, default = True, help = 'True for unchanged input data type')
     parser.add_argument('--checkpoint_interval', type = int, default = 1, help = 'interval between model checkpoints')
     # Training parameters
     parser.add_argument('--epochs', type = int, default = 40, help = 'number of epochs of training')
-    parser.add_argument('--batch_size', type = int, default = 8, help = 'size of the batches')
+    parser.add_argument('--batch_size', type = int, default = 1, help = 'size of the batches')
     parser.add_argument('--lr_g', type = float, default = 1e-4, help = 'Adam: learning rate')
     parser.add_argument('--lr_d', type = float, default = 4e-4, help = 'Adam: learning rate')
     parser.add_argument('--b1', type = float, default = 0.5, help = 'Adam: beta 1')
@@ -35,7 +36,7 @@ if __name__ == "__main__":
     parser.add_argument('--init_type', type = str, default = 'normal', help = 'the initialization type')
     parser.add_argument('--init_gain', type = float, default = 0.02, help = 'the initialization gain')
     # Dataset parameters
-    parser.add_argument('--baseroot', type = str, default = "C:\\Users\\ZHAO Yuzhi\\Desktop\\dataset\\ILSVRC2012_val_256", help = 'the training folder')
+    parser.add_argument('--baseroot', type = str, default = "C:\\Users\\yzzha\\Desktop\\dataset\\ILSVRC2012_val_256", help = 'the training folder')
     parser.add_argument('--mask_type', type = str, default = 'free_form', help = 'mask type')
     parser.add_argument('--imgsize', type = int, default = 256, help = 'size of image')
     parser.add_argument('--margin', type = int, default = 10, help = 'margin of image')
