@@ -56,26 +56,23 @@ if __name__ == "__main__":
         fake1, fake2 = model(masked_img, mask)
 
         # forward propagation
-        fusion_fake = img * (1 - mask) + fake2 * mask                    # in range [-1, 1]
-        img_1 = img
+        fusion_fake1 = img * (1 - mask) + fake1 * mask                      # in range [-1, 1]
+        fusion_fake2 = img * (1 - mask) + fake2 * mask                      # in range [-1, 1]
 
-        # show
+        # convert to visible image format
         img = img.cpu().numpy().reshape(3, opt.imgsize, opt.imgsize).transpose(1, 2, 0)
         img = (img + 1) * 128
         img = img.astype(np.uint8)
-        fusion_fake = fusion_fake.detach().cpu().numpy().reshape(3, opt.imgsize, opt.imgsize).transpose(1, 2, 0)
-        fusion_fake = (fusion_fake + 1) * 128
-        fusion_fake = fusion_fake.astype(np.uint8)
+        fusion_fake1 = fusion_fake1.detach().cpu().numpy().reshape(3, opt.imgsize, opt.imgsize).transpose(1, 2, 0)
+        fusion_fake1 = (fusion_fake1 + 1) * 128
+        fusion_fake1 = fusion_fake1.astype(np.uint8)
+        fusion_fake2 = fusion_fake2.detach().cpu().numpy().reshape(3, opt.imgsize, opt.imgsize).transpose(1, 2, 0)
+        fusion_fake2 = (fusion_fake2 + 1) * 128
+        fusion_fake2 = fusion_fake2.astype(np.uint8)
 
-        # forward propagation
-        fusion_fake_1 = img_1 * (1 - mask) + fake1 * mask                    # in range [-1, 1]
-
-        fusion_fake_1 = fusion_fake_1.detach().cpu().numpy().reshape(3, opt.imgsize, opt.imgsize).transpose(1, 2, 0)
-        fusion_fake_1 = (fusion_fake_1 + 1) * 128
-        fusion_fake_1 = fusion_fake_1.astype(np.uint8)
-
-        show_img = np.concatenate((img, fusion_fake_1, fusion_fake), axis = 1)
+        # show
+        show_img = np.concatenate((img, fusion_fake1, fusion_fake2), axis = 1)
         r, g, b = cv2.split(show_img)
         show_img = cv2.merge([b, g, r])
         cv2.imshow('comparison.jpg', show_img)
-        cv2.imwrite('result.jpg', show_img)
+        cv2.imwrite('result_%d.jpg' % batch_idx, show_img)
