@@ -13,7 +13,7 @@ if __name__ == "__main__":
     # ----------------------------------------
     parser = argparse.ArgumentParser()
     # Dataset parameters
-    parser.add_argument('--baseroot', type = str, default = "/home/alien/Documents/LINTingyu/inpainting/test", help = 'the testing folder')
+    parser.add_argument('--baseroot', type = str, default = "/home/alien/Documents/LINTingyu/inpainting/validation", help = 'the testing folder')
     parser.add_argument('--mask_type', type = str, default = 'free_form', help = 'mask type')
     parser.add_argument('--imgsize', type = int, default = 256, help = 'size of image')
     parser.add_argument('--margin', type = int, default = 10, help = 'margin of image')
