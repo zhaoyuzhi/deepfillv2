@@ -30,7 +30,7 @@ python train.py     --multi_gpu True
 
 At testing phase, please download the pre-trained [model]() first.
 
-For small image patches:
+For small image patches, make sure that all the dataset settings are *the same as training part*:
 ```bash
 python test.py 	    --load_name '*.pth' (please ensure the pre-trained model is in same path)
                     --baseroot [the path of TestingPhoneRaw]
@@ -47,3 +47,20 @@ There are some examples:
 The corresponding ground truth is:
 
 <img src="./images/gt.png" width="1000"/>
+
+### 1.3  PSNR experiment on 15 images
+
+| item | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+| :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: |
+| mask region | 13.23 | 18.23 | 17.06 | 13.16 | 19.41 | 11.47 | 29.58 | 15.51 | 14.71 | 25.99 | 20.54 | 19.21 | 15.86 | 11.79 | 10.73 | 17.10 |
+| full image | 26.50 | 45.01 | 32.35 | 29.59 | 31.65 | 24.57 | 48.44 | 30.27 | 32.24 | 51.18 | 35.15 | 36.75 | 30.56 | 27.21 | 29.13 | 34.04 |
+
+### 2  Acknowledgement
+
+@inproceedings{yu2019free,
+  title={Free-form image inpainting with gated convolution},
+  author={Yu, Jiahui and Lin, Zhe and Yang, Jimei and Shen, Xiaohui and Lu, Xin and Huang, Thomas S},
+  booktitle={Proceedings of the IEEE International Conference on Computer Vision},
+  pages={4471--4480},
+  year={2019}
+}
