@@ -2,6 +2,8 @@
 
 The PyTorch implementations and guideline for Gated Convolution based on ICCV 2019 oral paper: free-form inpainting (deepfillv2).
 
+We are focusing on Gated Conv so do not implement original paper completely.
+
 ## 1 Implementations
 
 Before running it, please ensure the environment is `Python 3.6` and `PyTorch 1.0.1`.
@@ -57,6 +59,7 @@ The corresponding ground truth is:
 
 ### 2  Acknowledgement
 
+```bash
 @inproceedings{yu2019free,
   title={Free-form image inpainting with gated convolution},
   author={Yu, Jiahui and Lin, Zhe and Yang, Jimei and Shen, Xiaohui and Lu, Xin and Huang, Thomas S},
@@ -64,3 +67,4 @@ The corresponding ground truth is:
   pages={4471--4480},
   year={2019}
 }
+```
