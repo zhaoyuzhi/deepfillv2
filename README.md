@@ -30,7 +30,7 @@ python train.py     --multi_gpu True
 
 ### 1.2  Test
 
-At testing phase, please download the pre-trained [model]() first.
+At testing phase, please download the pre-trained [model](https://portland-my.sharepoint.com/:f:/g/personal/yzzhao2-c_ad_cityu_edu_hk/Ei9kGB6futxJpDsW1_YgzgIB6DrVi3f3tfZSmAxsMj2ZGQ?e=BPMTlE) first.
 
 For small image patches, make sure that all the dataset settings are *the same as training part*:
 ```bash
@@ -53,7 +53,7 @@ The corresponding ground truth is:
 ### 1.3  PSNR experiment on 15 images
 
 | item | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
-| :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: | :----: |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 | mask region | 13.23 | 18.23 | 17.06 | 13.16 | 19.41 | 11.47 | 29.58 | 15.51 | 14.71 | 25.99 | 20.54 | 19.21 | 15.86 | 11.79 | 10.73 | 17.10 |
 | full image | 26.50 | 45.01 | 32.35 | 29.59 | 31.65 | 24.57 | 48.44 | 30.27 | 32.24 | 51.18 | 35.15 | 36.75 | 30.56 | 27.21 | 29.13 | 34.04 |
 
