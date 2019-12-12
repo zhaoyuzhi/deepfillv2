@@ -18,7 +18,7 @@ python train.py     --epochs 40
                     --batch_size 4
                     --perceptual_param 10
                     --gam_param 0.01
-                    --baseroot [the path of TrainingPhoneRaw]
+                    --baseroot [the path of training set, like Place365]
                     --mask_type 'free_form' [or 'single_bbox' or 'bbox']
                     --imgsize 256
 ```
@@ -35,7 +35,7 @@ At testing phase, please download the pre-trained [model](https://portland-my.sh
 For small image patches, make sure that all the dataset settings are *the same as training part*:
 ```bash
 python test.py 	    --load_name '*.pth' (please ensure the pre-trained model is in same path)
-                    --baseroot [the path of TestingPhoneRaw]
+                    --baseroot [the path of testing set]
                     --mask_type 'free_form' [or 'single_bbox' or 'bbox']
                     --imgsize 256
 ```
