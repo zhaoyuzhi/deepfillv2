@@ -48,9 +48,9 @@ def WGAN_trainer(opt):
     optimizer_d = torch.optim.Adam(generator.parameters(), lr = opt.lr_d, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
 
     # Learning rate decrease
-    def adjust_learning_rate(optimizer, epoch, opt):
+    def adjust_learning_rate(lr_in, optimizer, epoch, opt):
         """Set the learning rate to the initial LR decayed by "lr_decrease_factor" every "lr_decrease_epoch" epochs"""
-        lr = opt.lr * (opt.lr_decrease_factor ** (epoch // opt.lr_decrease_epoch))
+        lr = lr_in * (opt.lr_decrease_factor ** (epoch // opt.lr_decrease_epoch))
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
     
@@ -149,8 +149,8 @@ def WGAN_trainer(opt):
                 (loss_D.item(), GAN_Loss.item(), second_PerceptualLoss.item(), time_left))
 
         # Learning rate decrease
-        adjust_learning_rate(optimizer_g, (epoch + 1), opt)
-        adjust_learning_rate(optimizer_d, (epoch + 1), opt)
+        adjust_learning_rate(opt.lr_g, optimizer_g, (epoch + 1), opt)
+        adjust_learning_rate(opt.lr_d, optimizer_d, (epoch + 1), opt)
 
         # Save the model
         save_model(generator, (epoch + 1), opt)
@@ -194,9 +194,9 @@ def LSGAN_trainer(opt):
     optimizer_d = torch.optim.Adam(generator.parameters(), lr = opt.lr_d, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
 
     # Learning rate decrease
-    def adjust_learning_rate(optimizer, epoch, opt):
+    def adjust_learning_rate(lr_in, optimizer, epoch, opt):
         """Set the learning rate to the initial LR decayed by "lr_decrease_factor" every "lr_decrease_epoch" epochs"""
-        lr = opt.lr * (opt.lr_decrease_factor ** (epoch // opt.lr_decrease_epoch))
+        lr = lr_in * (opt.lr_decrease_factor ** (epoch // opt.lr_decrease_epoch))
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
     
@@ -305,8 +305,8 @@ def LSGAN_trainer(opt):
                 (loss_D.item(), GAN_Loss.item(), second_PerceptualLoss.item(), time_left))
 
         # Learning rate decrease
-        adjust_learning_rate(optimizer_g, (epoch + 1), opt)
-        adjust_learning_rate(optimizer_d, (epoch + 1), opt)
+        adjust_learning_rate(opt.lr_g, optimizer_g, (epoch + 1), opt)
+        adjust_learning_rate(opt.lr_d, optimizer_d, (epoch + 1), opt)
 
         # Save the model
         save_model(generator, (epoch + 1), opt)
