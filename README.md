@@ -2,7 +2,7 @@
 
 The PyTorch implementations and guideline for Gated Convolution based on ICCV 2019 oral paper: free-form inpainting (deepfillv2).
 
-We are focusing on Gated Conv so do not implement original paper completely.
+We are focusing on Gated Conv so do not implement original paper completely, and implement it as a coarse-to-fine manner.
 
 ## 1 Implementations
 
@@ -17,7 +17,7 @@ python train.py     --epochs 40
                     --lr_g 0.0001
                     --batch_size 4
                     --perceptual_param 10
-                    --gam_param 0.01
+                    --gan_param 0.01
                     --baseroot [the path of training set, like Place365]
                     --mask_type 'free_form' [or 'single_bbox' or 'bbox']
                     --imgsize 256
