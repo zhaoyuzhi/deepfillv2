@@ -45,7 +45,7 @@ def WGAN_trainer(opt):
 
     # Optimizers
     optimizer_g = torch.optim.Adam(generator.parameters(), lr = opt.lr_g, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
-    optimizer_d = torch.optim.Adam(generator.parameters(), lr = opt.lr_d, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
+    optimizer_d = torch.optim.Adam(discriminator.parameters(), lr = opt.lr_d, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
 
     # Learning rate decrease
     def adjust_learning_rate(lr_in, optimizer, epoch, opt):
