@@ -267,6 +267,7 @@ def LSGAN_trainer(opt):
             # Overall Loss and optimize
             loss_D = 0.5 * (loss_fake + loss_true)
             loss_D.backward()
+            optimizer_d.step()
 
             ### Train Generator
             optimizer_g.zero_grad()
