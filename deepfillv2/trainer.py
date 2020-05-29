@@ -110,6 +110,7 @@ def WGAN_trainer(opt):
             # Overall Loss and optimize
             loss_D = - torch.mean(true_scalar) + torch.mean(fake_scalar)
             loss_D.backward()
+            optimizer_d.step()
 
             ### Train Generator
             optimizer_g.zero_grad()
