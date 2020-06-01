@@ -13,6 +13,7 @@ if __name__ == "__main__":
     parser.add_argument('--gpu_ids', type = str, default = "0, 1", help = 'gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
     parser.add_argument('--cudnn_benchmark', type = bool, default = True, help = 'True for unchanged input data type')
     parser.add_argument('--checkpoint_interval', type = int, default = 1, help = 'interval between model checkpoints')
+    parser.add_argument('--log_every', type=int, default=10, help='how often to log output images')
     # Training parameters
     parser.add_argument('--epochs', type = int, default = 40, help = 'number of epochs of training')
     parser.add_argument('--batch_size', type = int, default = 1, help = 'size of the batches')
