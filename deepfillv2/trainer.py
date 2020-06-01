@@ -6,15 +6,41 @@ import torch.nn as nn
 import torch.backends.cudnn as cudnn
 from torch.utils.data import DataLoader
 
+from tensorboardX import SummaryWriter
+import torchvision.utils as vutils
+
 import network
 import dataset
 import utils
+
+class Logger:
+    def __init__(self, opt):
+        self.writer = SummaryWriter()
+        self.current_iteration = 0
+
+    def begin(self, n_iter):
+        self.current_iteration = n_iter
+            
+    def add_image(self, image, name='image'):
+        """Logs image grid
+        
+        Args:
+            image: [B, 3, H, W] or [B, 1, H, W]
+        """
+        x = vutils.make_grid(image, normalize=True, scale_each=True)
+        self.writer.add_image(name, x, self.current_iteration)
+    
+    def add_scalars(self, dictionary):
+        for k, v in dictionary.items():
+            self.writer.add_scalar(k, v, self.current_iteration)
+
 
 def WGAN_trainer(opt):
     # ----------------------------------------
     #      Initialize training parameters
     # ----------------------------------------
-
+    logger = Logger(opt)
+            
     # cudnn benchmark accelerates the network
     if opt.cudnn_benchmark == True:
         cudnn.benchmark = True
@@ -83,25 +109,34 @@ def WGAN_trainer(opt):
 
     # Initialize start time
     prev_time = time.time()
-
-    # Training loop
+    
+    # training loop
+    n_iter = 0
     for epoch in range(opt.epochs):
         for batch_idx, (img, mask) in enumerate(dataloader):
-
+            n_iter += 1
+            logger.begin(n_iter)
+            
             # Load mask (shape: [B, 1, H, W]), masked_img (shape: [B, 3, H, W]), img (shape: [B, 3, H, W]) and put it to cuda
             img = img.cuda()
             mask = mask.cuda()
-
-            ### Train Discriminator
+            
+            ### Train discriminator
             optimizer_d.zero_grad()
-
+            
             # Generator output
             first_out, second_out = generator(img, mask)
-
+            
             # forward propagation
             first_out_wholeimg = img * (1 - mask) + first_out * mask        # in range [-1, 1]
             second_out_wholeimg = img * (1 - mask) + second_out * mask      # in range [-1, 1]
-
+            
+            if n_iter % opt.log_every == 1:
+                logger.add_image(img, 'image/training')
+                logger.add_image(mask, 'mask/training')
+                logger.add_image(first_out_wholeimg, 'image/first iteration')
+                logger.add_image(second_out_wholeimg, 'image/second iteration')
+                
             # Fake samples
             fake_scalar = discriminator(second_out_wholeimg.detach(), mask)
             # True samples
@@ -142,7 +177,17 @@ def WGAN_trainer(opt):
             batches_left = opt.epochs * len(dataloader) - batches_done
             time_left = datetime.timedelta(seconds = batches_left * (time.time() - prev_time))
             prev_time = time.time()
-
+            
+            logger.add_scalars({
+                'Epoch': epoch + 1,
+                'Batch': batch_idx,
+                'loss/first Mask L1 Loss': first_MaskL1Loss.item(),
+                'loss/second Mask L1 Loss': second_MaskL1Loss.item(),
+                'gan/D Loss': loss_D.item(),
+                'gan/G Loss': GAN_Loss.item(),
+                'Perceptual Loss': second_PerceptualLoss.item()
+            })
+            
             # Print log
             print("\r[Epoch %d/%d] [Batch %d/%d] [first Mask L1 Loss: %.5f] [second Mask L1 Loss: %.5f]" %
                 ((epoch + 1), opt.epochs, batch_idx, len(dataloader), first_MaskL1Loss.item(), second_MaskL1Loss.item()))
