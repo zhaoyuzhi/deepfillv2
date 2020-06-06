@@ -1,3 +1,4 @@
+import os
 import time
 import datetime
 import numpy as np
@@ -17,6 +18,8 @@ import wandb
 class Logger:
     def __init__(self, opt):
         wandb.init(project="inpainting")
+        wandb.run.name = wandb.run.id
+        wandb.run.save()
 
         self.writer = SummaryWriter()
         self.current_iteration = 0
@@ -40,23 +43,16 @@ class Logger:
         wandb.log(dictionary)
 
 
-def WGAN_trainer(opt):
-    # ----------------------------------------
-    #      Initialize training parameters
-    # ----------------------------------------
-    logger = Logger(opt)
-            
-    # cudnn benchmark accelerates the network
-    if opt.cudnn_benchmark == True:
-        cudnn.benchmark = True
-    else:
-        cudnn.benchmark = False
-
-    # Build networks
+def create_networks(opt, checkpoint=None):
     generator = utils.create_generator(opt)
     discriminator = utils.create_discriminator(opt)
     perceptualnet = utils.create_perceptualnet()
-
+    
+    if checkpoint:
+        # Restore the network state
+        generator.load_state_dict(checkpoint['G'])
+        discriminator.load_state_dict(checkpoint['D'])
+    
     # To device
     if opt.multi_gpu == True:
         generator = nn.DataParallel(generator)
@@ -70,30 +66,119 @@ def WGAN_trainer(opt):
         discriminator = discriminator.cuda()
         perceptualnet = perceptualnet.cuda()
     
-    # Log metrics with wandb
-    wandb.watch(generator)
-    wandb.config.update(opt)
+    return generator, discriminator, perceptualnet
 
+
+def create_optimizers(generator, discriminator, opt, checkpoint=None):
+    optimizer_g = torch.optim.Adam(generator.parameters(), lr = opt.lr_g, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
+    optimizer_d = torch.optim.Adam(discriminator.parameters(), lr = opt.lr_d, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
+    
+    def load_optimizer(optimizer, name):
+        optimizer.load_state_dict(checkpoint[name])
+
+    if checkpoint:
+        load_optimizer(optimizer_g, 'optimizer_g')
+        load_optimizer(optimizer_d, 'optimizer_d')
+        
+    return optimizer_g, optimizer_d
+
+
+def auto_sync_checkpoints_to_wandb():
+    # Save any files starting with "checkpoint" as they're written to
+    wandb.save(os.path.join(wandb.run.dir, "checkpoint*"))
+
+
+# Learning rate decrease
+def adjust_learning_rate(lr_in, optimizer, epoch, opt):
+    """Set the learning rate to the initial LR decayed by "lr_decrease_factor" every "lr_decrease_epoch" epochs"""
+    lr = lr_in * (opt.lr_decrease_factor ** (epoch // opt.lr_decrease_epoch))
+    for param_group in optimizer.param_groups:
+        param_group['lr'] = lr
+
+
+def restore(opt):
+    if not opt.restore:
+        return None
+    
+    print('-' * 30)
+    print(f'Restoring from {opt.wandb_runpath}/{opt.restore}...')
+    try:
+        if '/home' in opt.wandb_runpath:
+            # Restore from local directory
+            from shutil import copyfile
+            copyfile(opt.wandb_runpath, os.path.join(wandb.run.dir, f'checkpoint_{opt.restore}.pth'))
+        else:
+            # Copy from a previous run to the current run directory
+            wandb.restore(f'checkpoint_{opt.restore}.pth', run_path=opt.wandb_runpath)
+        
+        # Load the checkpoint
+        checkpoint = torch.load(os.path.join(wandb.run.dir, f'checkpoint_{opt.restore}.pth'))
+        return checkpoint
+    except Exception as e:
+        print('Restoring failed :(', e)
+        return None
+        
+
+def save_state( epoch,batch,n_iter,
+                G, optimizer_g,
+                D, optimizer_d,
+                loss, opt):
+    package = lambda model: model.module.state_dict() if opt.multi_gpu else model.state_dict()
+    
+    state = {
+        'epoch': epoch,
+        'G': package(G),
+        'optimizer_g': package(optimizer_g),
+        'D': package(D),
+        'optimizer_d': package(optimizer_d),
+        'n_iter': n_iter,
+        'loss': loss,
+    }
+    
+    print('-' * 30)
+    
+    path = os.path.join(wandb.run.dir, f'checkpoint_{n_iter}.pth')
+    print(f'  Saving at {path}')
+    torch.save(state, path)
+    
+    # also save to latest
+    path = os.path.join(wandb.run.dir, f'checkpoint_latest.pth')
+    print(f'     You can restore this checkpoint with "--restore latest"')
+    torch.save(state, path)
+    
+    print('-' * 30)
+    
+
+def WGAN_trainer(opt):
+    # ----------------------------------------
+    #      Initialize training parameters
+    # ----------------------------------------
+    logger = Logger(opt)
+    checkpoint = restore(opt)
+            
+    # cudnn benchmark accelerates the network
+    if opt.cudnn_benchmark == True:
+        cudnn.benchmark = True
+    else:
+        cudnn.benchmark = False
+    
+    # --------------------------------------
+    #         Initialize models  
+    # --------------------------------------
+    generator, discriminator, perceptualnet = create_networks(opt, checkpoint)
+    
     # Loss functions
     L1Loss = nn.L1Loss()
     #FeatureMatchingLoss = FML1Loss(opt.fm_param)
-
-    # Optimizers
-    optimizer_g = torch.optim.Adam(generator.parameters(), lr = opt.lr_g, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
-    optimizer_d = torch.optim.Adam(discriminator.parameters(), lr = opt.lr_d, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
-
-    # Learning rate decrease
-    def adjust_learning_rate(lr_in, optimizer, epoch, opt):
-        """Set the learning rate to the initial LR decayed by "lr_decrease_factor" every "lr_decrease_epoch" epochs"""
-        lr = lr_in * (opt.lr_decrease_factor ** (epoch // opt.lr_decrease_epoch))
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = lr
     
-    # Model saving
-    def save_model(net, epoch, opt):
-        if epoch % opt.checkpoint_interval == 0:
-            # Save model to wandb
-            torch.save(net.state_dict(), os.path.join(wandb.run.dir, 'model.pt'))
+    # Optimizers
+    optimizer_g, optimizer_d = create_optimizers(generator, discriminator, opt, checkpoint)
+
+    # Log metrics with wandb
+    wandb.watch(generator)
+    wandb.config.update(opt)
+    auto_sync_checkpoints_to_wandb()
+
 
     # ----------------------------------------
     #       Initialize training dataset
@@ -112,10 +197,12 @@ def WGAN_trainer(opt):
 
     # Initialize start time
     prev_time = time.time()
-    
+
+    initial_epoch = checkpoint['epoch'] if opt.restore else 0
+    n_iter = checkpoint['n_iter'] if opt.restore else 0
+        
     # training loop
-    n_iter = 0
-    for epoch in range(opt.epochs):
+    for epoch in range(initial_epoch, opt.epochs):
         for batch_idx, (img, mask) in enumerate(dataloader):
             n_iter += 1
             logger.begin(n_iter)
@@ -176,14 +263,14 @@ def WGAN_trainer(opt):
             optimizer_g.step()
 
             # Determine approximate time left
-            batches_done = epoch * len(dataloader) + batch_idx
+            batches_done = n_iter
             batches_left = opt.epochs * len(dataloader) - batches_done
             time_left = datetime.timedelta(seconds = batches_left * (time.time() - prev_time))
             prev_time = time.time()
             
             logger.add_scalars({
                 'Epoch': epoch + 1,
-                'Batch': batch_idx,
+                'Iteration': n_iter,
                 'loss/first Mask L1 Loss': first_MaskL1Loss.item(),
                 'loss/second Mask L1 Loss': second_MaskL1Loss.item(),
                 'gan/D Loss': loss_D.item(),
@@ -192,17 +279,29 @@ def WGAN_trainer(opt):
             })
             
             # Print log
-            print("\r[Epoch %d/%d] [Batch %d/%d] [first Mask L1 Loss: %.5f] [second Mask L1 Loss: %.5f]" %
-                ((epoch + 1), opt.epochs, batch_idx, len(dataloader), first_MaskL1Loss.item(), second_MaskL1Loss.item()))
-            print("\r[D Loss: %.5f] [G Loss: %.5f] [Perceptual Loss: %.5f] time_left: %s" %
-                (loss_D.item(), GAN_Loss.item(), second_PerceptualLoss.item(), time_left))
+            if n_iter % opt.log_every == 1:
+                print("\r[Epoch %d/%d] [Batch %d/%d] iteration %d" %
+                    ((epoch + 1), opt.epochs, batch_idx, len(dataloader), n_iter))
+                print("\r[D Loss: %.5f] [G Loss: %.5f] [Perceptual Loss: %.5f] time_left: %s" %
+                    (loss_D.item(), GAN_Loss.item(), second_PerceptualLoss.item(), time_left))
+            
+            if n_iter % opt.checkpoint_every == 1:
+                save_state(
+                    epoch=epoch,
+                    batch=batch_idx,
+                    n_iter=n_iter,
+                    G=generator,
+                    optimizer_g=optimizer_g,
+                    D=discriminator,
+                    optimizer_d=optimizer_d,
+                    loss=loss,
+                    opt=opt
+                )
 
         # Learning rate decrease
         adjust_learning_rate(opt.lr_g, optimizer_g, (epoch + 1), opt)
         adjust_learning_rate(opt.lr_d, optimizer_d, (epoch + 1), opt)
 
-        # Save the model
-        save_model(generator, (epoch + 1), opt)
 
 def LSGAN_trainer(opt):
     # ----------------------------------------
