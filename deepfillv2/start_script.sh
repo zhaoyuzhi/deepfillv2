@@ -15,4 +15,8 @@ python train.py \
 	--gan_param 0.01 \
 	--baseroot $BASEROOT \
 	--mask_type 'free_form' \
-	--imgsize 256
+	--imgsize 256 \
+    --log_every 50
+
+# on a V100, it goes pretty fast! (8k iterations per hour)
+# on a K80, it goes slowly (8x slower).

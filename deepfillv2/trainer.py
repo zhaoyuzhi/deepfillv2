@@ -12,9 +12,12 @@ import torchvision.utils as vutils
 import network
 import dataset
 import utils
+import wandb
 
 class Logger:
     def __init__(self, opt):
+        wandb.init(project="inpainting")
+
         self.writer = SummaryWriter()
         self.current_iteration = 0
 
@@ -29,10 +32,12 @@ class Logger:
         """
         x = vutils.make_grid(image, normalize=True, scale_each=True)
         self.writer.add_image(name, x, self.current_iteration)
+        wandb.log({name: [wandb.Image(x, caption=name)]})
     
     def add_scalars(self, dictionary):
         for k, v in dictionary.items():
             self.writer.add_scalar(k, v, self.current_iteration)
+        wandb.log(dictionary)
 
 
 def WGAN_trainer(opt):
@@ -64,6 +69,10 @@ def WGAN_trainer(opt):
         generator = generator.cuda()
         discriminator = discriminator.cuda()
         perceptualnet = perceptualnet.cuda()
+    
+    # Log metrics with wandb
+    wandb.watch(generator)
+    wandb.config.update(opt)
 
     # Loss functions
     L1Loss = nn.L1Loss()
@@ -80,18 +89,12 @@ def WGAN_trainer(opt):
         for param_group in optimizer.param_groups:
             param_group['lr'] = lr
     
-    # Save the model if pre_train == True
+    # Model saving
     def save_model(net, epoch, opt):
-        """Save the model at "checkpoint_interval" and its multiple"""
-        if opt.multi_gpu == True:
-            if epoch % opt.checkpoint_interval == 0:
-                torch.save(net.module, 'deepfillNet_epoch%d_batchsize%d.pth' % (epoch, opt.batch_size))
-                print('The trained model is successfully saved at epoch %d' % (epoch))
-        else:
-            if epoch % opt.checkpoint_interval == 0:
-                torch.save(net, 'deepfillNet_epoch%d_batchsize%d.pth' % (epoch, opt.batch_size))
-                print('The trained model is successfully saved at epoch %d' % (epoch))
-    
+        if epoch % opt.checkpoint_interval == 0:
+            # Save model to wandb
+            torch.save(net.state_dict(), os.path.join(wandb.run.dir, 'model.pt'))
+
     # ----------------------------------------
     #       Initialize training dataset
     # ----------------------------------------
