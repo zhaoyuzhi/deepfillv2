@@ -1,6 +1,8 @@
+import os
 import time
 import datetime
 import numpy as np
+import cv2
 import torch
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
@@ -16,10 +18,15 @@ def WGAN_trainer(opt):
     # ----------------------------------------
 
     # cudnn benchmark accelerates the network
-    if opt.cudnn_benchmark == True:
-        cudnn.benchmark = True
-    else:
-        cudnn.benchmark = False
+    cudnn.benchmark = opt.cudnn_benchmark
+
+    # configurations
+    save_folder = opt.save_path
+    sample_folder = opt.sample_path
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
+    if not os.path.exists(sample_folder):
+        os.makedirs(sample_folder)
 
     # Build networks
     generator = utils.create_generator(opt)
@@ -41,7 +48,6 @@ def WGAN_trainer(opt):
 
     # Loss functions
     L1Loss = nn.L1Loss()
-    #FeatureMatchingLoss = FML1Loss(opt.fm_param)
 
     # Optimizers
     optimizer_g = torch.optim.Adam(generator.parameters(), lr = opt.lr_g, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
@@ -57,13 +63,15 @@ def WGAN_trainer(opt):
     # Save the model if pre_train == True
     def save_model(net, epoch, opt):
         """Save the model at "checkpoint_interval" and its multiple"""
+        model_name = 'deepfillv2_LSGAN_epoch%d_batchsize%d.pth' % (epoch, opt.batch_size)
+        model_name = os.path.join(save_folder, model_name)
         if opt.multi_gpu == True:
             if epoch % opt.checkpoint_interval == 0:
-                torch.save(net.module, 'deepfillNet_epoch%d_batchsize%d.pth' % (epoch, opt.batch_size))
+                torch.save(net.module.state_dict(), model_name)
                 print('The trained model is successfully saved at epoch %d' % (epoch))
         else:
             if epoch % opt.checkpoint_interval == 0:
-                torch.save(net, 'deepfillNet_epoch%d_batchsize%d.pth' % (epoch, opt.batch_size))
+                torch.save(net.state_dict(), model_name)
                 print('The trained model is successfully saved at epoch %d' % (epoch))
     
     # ----------------------------------------
@@ -99,8 +107,8 @@ def WGAN_trainer(opt):
             first_out, second_out = generator(img, mask)
 
             # forward propagation
-            first_out_wholeimg = img * (1 - mask) + first_out * mask        # in range [-1, 1]
-            second_out_wholeimg = img * (1 - mask) + second_out * mask      # in range [-1, 1]
+            first_out_wholeimg = img * (1 - mask) + first_out * mask        # in range [0, 1]
+            second_out_wholeimg = img * (1 - mask) + second_out * mask      # in range [0, 1]
 
             # Fake samples
             fake_scalar = discriminator(second_out_wholeimg.detach(), mask)
@@ -124,16 +132,13 @@ def WGAN_trainer(opt):
             GAN_Loss = - torch.mean(fake_scalar)
 
             # Get the deep semantic feature maps, and compute Perceptual Loss
-            img = (img + 1) / 2                                             # in range [0, 1]
-            img = utils.normalize_ImageNet_stats(img)                       # in range of ImageNet
             img_featuremaps = perceptualnet(img)                            # feature maps
-            second_out_wholeimg = (second_out_wholeimg + 1) / 2             # in range [0, 1]
-            second_out_wholeimg = utils.normalize_ImageNet_stats(second_out_wholeimg)
             second_out_wholeimg_featuremaps = perceptualnet(second_out_wholeimg)
             second_PerceptualLoss = L1Loss(second_out_wholeimg_featuremaps, img_featuremaps)
 
             # Compute losses
-            loss = first_MaskL1Loss + second_MaskL1Loss + opt.perceptual_param * second_PerceptualLoss + opt.gan_param * GAN_Loss
+            loss = opt.lambda_l1 * first_MaskL1Loss + opt.lambda_l1 * second_MaskL1Loss + \
+                opt.lambda_perceptual * second_PerceptualLoss + opt.lambda_gan * GAN_Loss
             loss.backward()
             optimizer_g.step()
 
@@ -156,16 +161,29 @@ def WGAN_trainer(opt):
         # Save the model
         save_model(generator, (epoch + 1), opt)
 
+        ### Sample data every epoch
+        masked_img = img * (1 - mask) + mask
+        mask = torch.cat((mask, mask, mask), 1)
+        if (epoch + 1) % 1 == 0:
+            img_list = [img, mask, masked_img, first_out, second_out]
+            name_list = ['gt', 'mask', 'masked_img', 'first_out', 'second_out']
+            utils.save_sample_png(sample_folder = sample_folder, sample_name = 'epoch%d' % (epoch + 1), img_list = img_list, name_list = name_list, pixel_max_cnt = 255)
+
 def LSGAN_trainer(opt):
     # ----------------------------------------
     #      Initialize training parameters
     # ----------------------------------------
 
     # cudnn benchmark accelerates the network
-    if opt.cudnn_benchmark == True:
-        cudnn.benchmark = True
-    else:
-        cudnn.benchmark = False
+    cudnn.benchmark = opt.cudnn_benchmark
+
+    # configurations
+    save_folder = opt.save_path
+    sample_folder = opt.sample_path
+    if not os.path.exists(save_folder):
+        os.makedirs(save_folder)
+    if not os.path.exists(sample_folder):
+        os.makedirs(sample_folder)
 
     # Build networks
     generator = utils.create_generator(opt)
@@ -188,7 +206,6 @@ def LSGAN_trainer(opt):
     # Loss functions
     L1Loss = nn.L1Loss()
     MSELoss = nn.MSELoss()
-    #FeatureMatchingLoss = FML1Loss(opt.fm_param)
 
     # Optimizers
     optimizer_g = torch.optim.Adam(generator.parameters(), lr = opt.lr_g, betas = (opt.b1, opt.b2), weight_decay = opt.weight_decay)
@@ -204,13 +221,15 @@ def LSGAN_trainer(opt):
     # Save the model if pre_train == True
     def save_model(net, epoch, opt):
         """Save the model at "checkpoint_interval" and its multiple"""
+        model_name = 'deepfillv2_WGAN_epoch%d_batchsize%d.pth' % (epoch, opt.batch_size)
+        model_name = os.path.join(save_folder, model_name)
         if opt.multi_gpu == True:
             if epoch % opt.checkpoint_interval == 0:
-                torch.save(net.module, 'deepfillNet_epoch%d_batchsize%d.pth' % (epoch, opt.batch_size))
+                torch.save(net.module.state_dict(), model_name)
                 print('The trained model is successfully saved at epoch %d' % (epoch))
         else:
             if epoch % opt.checkpoint_interval == 0:
-                torch.save(net, 'deepfillNet_epoch%d_batchsize%d.pth' % (epoch, opt.batch_size))
+                torch.save(net.state_dict(), model_name)
                 print('The trained model is successfully saved at epoch %d' % (epoch))
     
     # ----------------------------------------
@@ -253,8 +272,8 @@ def LSGAN_trainer(opt):
             first_out, second_out = generator(img, mask)
 
             # forward propagation
-            first_out_wholeimg = img * (1 - mask) + first_out * mask        # in range [-1, 1]
-            second_out_wholeimg = img * (1 - mask) + second_out * mask      # in range [-1, 1]
+            first_out_wholeimg = img * (1 - mask) + first_out * mask        # in range [0, 1]
+            second_out_wholeimg = img * (1 - mask) + second_out * mask      # in range [0, 1]
 
             # Fake samples
             fake_scalar = discriminator(second_out_wholeimg.detach(), mask)
@@ -281,16 +300,13 @@ def LSGAN_trainer(opt):
             GAN_Loss = MSELoss(fake_scalar, valid)
 
             # Get the deep semantic feature maps, and compute Perceptual Loss
-            img = (img + 1) / 2                                             # in range [0, 1]
-            img = utils.normalize_ImageNet_stats(img)                       # in range of ImageNet
             img_featuremaps = perceptualnet(img)                            # feature maps
-            second_out_wholeimg = (second_out_wholeimg + 1) / 2             # in range [0, 1]
-            second_out_wholeimg = utils.normalize_ImageNet_stats(second_out_wholeimg)
             second_out_wholeimg_featuremaps = perceptualnet(second_out_wholeimg)
             second_PerceptualLoss = L1Loss(second_out_wholeimg_featuremaps, img_featuremaps)
 
             # Compute losses
-            loss = first_MaskL1Loss + second_MaskL1Loss + opt.perceptual_param * second_PerceptualLoss + opt.gan_param * GAN_Loss
+            loss = opt.lambda_l1 * first_MaskL1Loss + opt.lambda_l1 * second_MaskL1Loss + \
+                opt.lambda_perceptual * second_PerceptualLoss + opt.lambda_gan * GAN_Loss
             loss.backward()
             optimizer_g.step()
 
@@ -312,3 +328,11 @@ def LSGAN_trainer(opt):
 
         # Save the model
         save_model(generator, (epoch + 1), opt)
+
+        ### Sample data every epoch
+        masked_img = img * (1 - mask) + mask
+        mask = torch.cat((mask, mask, mask), 1)
+        if (epoch + 1) % 1 == 0:
+            img_list = [img, mask, masked_img, first_out, second_out]
+            name_list = ['gt', 'mask', 'masked_img', 'first_out', 'second_out']
+            utils.save_sample_png(sample_folder = sample_folder, sample_name = 'epoch%d' % (epoch + 1), img_list = img_list, name_list = name_list, pixel_max_cnt = 255)

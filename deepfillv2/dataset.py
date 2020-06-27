@@ -1,10 +1,9 @@
 import os
+import cv2
+import numpy as np
 import torch
 from torchvision import transforms
 from torch.utils.data import Dataset
-import numpy as np
-import cv2
-from PIL import Image
 
 import utils
 
@@ -15,19 +14,16 @@ class InpaintDataset(Dataset):
         assert opt.mask_type in ALLMASKTYPES
         self.opt = opt
         self.imglist = utils.get_files(opt.baseroot)
-        self.transform = transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-        ])
 
     def __len__(self):
         return len(self.imglist)
 
     def __getitem__(self, index):
         # image
-        img = Image.open(self.imglist[index])
-        img = img.resize((self.opt.imgsize, self.opt.imgsize), Image.ANTIALIAS).convert('RGB')
-        img = self.transform(img)
+        img = cv2.imread(self.imglist[index])
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, (self.opt.imgsize, self.opt.imgsize))
+
         # mask
         if self.opt.mask_type == 'single_bbox':
             mask = self.bbox2mask(shape = self.opt.imgsize, margin = self.opt.margin, bbox_shape = self.opt.bbox_shape, times = 1)
@@ -35,7 +31,10 @@ class InpaintDataset(Dataset):
             mask = self.bbox2mask(shape = self.opt.imgsize, margin = self.opt.margin, bbox_shape = self.opt.bbox_shape, times = self.opt.mask_num)
         if self.opt.mask_type == 'free_form':
             mask = self.random_ff_mask(shape = self.opt.imgsize, max_angle = self.opt.max_angle, max_len = self.opt.max_len, max_width = self.opt.max_width, times = self.opt.mask_num)
+        
         # the outputs are entire image and mask, respectively
+        img = torch.from_numpy(img.astype(np.float32) / 255.0).permute(2, 0, 1).contiguous()
+        mask = torch.from_numpy(mask.astype(np.float32)).contiguous()
         return img, mask
 
     def random_ff_mask(self, shape, max_angle = 4, max_len = 40, max_width = 10, times = 15):
@@ -107,3 +106,26 @@ class InpaintDataset(Dataset):
             w = int(bbox[3] * 0.1) + np.random.randint(int(bbox[3] * 0.2) + 1)
             mask[(bbox[0] + h) : (bbox[0] + bbox[2] - h), (bbox[1] + w) : (bbox[1] + bbox[3] - w)] = 1.
         return mask.reshape((1, ) + mask.shape).astype(np.float32)
+        
+class ValidationSet_with_Known_Mask(Dataset):
+    def __init__(self, opt):
+        self.opt = opt
+        self.namelist = utils.get_names(opt.baseroot)
+
+    def __len__(self):
+        return len(self.namelist)
+
+    def __getitem__(self, index):
+        # image
+        imgname = self.namelist[index]
+        imgpath = os.path.join(self.opt.baseroot, imgname)
+        img = cv2.imread(imgpath)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        img = cv2.resize(img, (self.opt.imgsize, self.opt.imgsize))
+        # mask
+        maskpath = os.path.join(self.opt.maskroot, imgname)
+        img = cv2.imread(maskpath, cv2.IMREAD_GRAYSCALE)
+        # the outputs are entire image and mask, respectively
+        img = torch.from_numpy(img.astype(np.float32) / 255.0).permute(2, 0, 1).contiguous()
+        mask = torch.from_numpy(mask.astype(np.float32)).unsqueeze(0).contiguous()
+        return img, mask, imgname
