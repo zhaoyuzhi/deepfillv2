@@ -30,7 +30,7 @@ python train.py     --multi_gpu True
 
 ### 1.2  Test
 
-At testing phase, please download the pre-trained [model](https://portland-my.sharepoint.com/:f:/g/personal/yzzhao2-c_ad_cityu_edu_hk/Ei9kGB6futxJpDsW1_YgzgIB6DrVi3f3tfZSmAxsMj2ZGQ?e=BPMTlE) first.
+At testing phase, please download the pre-trained [model](https://portland-my.sharepoint.com/:f:/g/personal/yzzhao2-c_ad_cityu_edu_hk/Et5BaknFewNEgO6C52RxMN0BrroVZjEL_iVwKZQ53yXcXQ?e=bTWTG3) first. (including deepfillv2 network for RGB images and grayscale images)
 
 For small image patches, make sure that all the dataset settings are *the same as training part*:
 ```bash
